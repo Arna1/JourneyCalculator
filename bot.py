@@ -1,3 +1,4 @@
+import os
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -65,7 +66,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Configuración principal del bot
 def main():
     # Coloca aquí el token de tu bot
-    TOKEN = "7661906092:AAFWbIIYZVbL5zyoFgQlxHCvTO9BUYGH_KU"
+    TOKEN = os.getenv("TOKEN_API")
 
     # Crear la aplicación
     application = Application.builder().token(TOKEN).build()
