@@ -1,5 +1,4 @@
 import os
-import asyncio
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -10,17 +9,24 @@ from telegram.ext import (
     ContextTypes,
 )
 from datetime import datetime, timedelta
-from flask import Flask
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Estados del flujo de conversación
 ENTRADA, PAUSA, REGRESO = range(3)
 
-# Crear la aplicación Flask
-app = Flask(__name__)
+# Servidor web simple para Render
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write("El bot está corriendo y escuchando en Render.".encode("utf-8"))
 
-@app.route('/')
-def home():
-    return "El bot está corriendo y escuchando en Render."
+
+def run_server():
+    port = int(os.environ.get("PORT", 5000))
+    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
+    server.serve_forever()
 
 # Función para iniciar el bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -72,12 +78,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Operación cancelada. ¡Hasta la próxima!")
     return ConversationHandler.END
 
-# Función principal para ejecutar el bot y el servidor Flask juntos
-async def main():
+# Configuración principal del bot
+def main():
     # Coloca aquí el token de tu bot
     TOKEN = os.getenv("TOKEN_API")
 
-    # Crear la aplicación de Telegram
+    # Crear la aplicación
     application = Application.builder().token(TOKEN).build()
 
     # Conversación
@@ -93,22 +99,13 @@ async def main():
 
     application.add_handler(conv_handler)
 
-    # Inicializar y arrancar el bot
-    await application.initialize()  # Inicializa la aplicación
-    await application.start()       # Arranca el bot
-    print("Bot iniciado")
+    # Ejecutar el servidor web en un hilo separado
+    server_thread = threading.Thread(target=run_server)
+    server_thread.daemon = True
+    server_thread.start()
 
-    # Mantén la aplicación corriendo
-    async def stop():
-        await application.stop()    # Detiene el bot al finalizar
-        await application.shutdown()
-
-    try:
-        # Ejecuta Flask como una tarea asincrónica
-        port = int(os.environ.get("PORT", 5000))
-        await asyncio.to_thread(app.run, host='0.0.0.0', port=port)
-    finally:
-        await stop()
+    # Iniciar el bot (Polling)
+    application.run_polling()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
