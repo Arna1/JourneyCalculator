@@ -10,7 +10,7 @@ from telegram.ext import (
     ContextTypes,
 )
 from datetime import datetime, timedelta
-from flask import Flask, Request
+from flask import Flask
 
 # Estados del flujo de conversación
 ENTRADA, PAUSA, REGRESO = range(3)
@@ -93,15 +93,14 @@ async def main():
 
     application.add_handler(conv_handler)
 
-    # Crea una tarea asincrónica para ejecutar el bot
-    bot_task = asyncio.create_task(application.run_polling())
+    # Inicia el bot como una tarea asincrónica
+    await application.start()  # Arranca el bot
+    print("Bot iniciado")
 
-    # Crea una tarea asincrónica para ejecutar Flask
+    # Mantén el servidor Flask ejecutándose
     port = int(os.environ.get("PORT", 5000))
-    flask_task = asyncio.create_task(asyncio.to_thread(app.run, host='0.0.0.0', port=port))
-
-    # Ejecuta ambas tareas
-    await asyncio.gather(bot_task, flask_task)
+    loop = asyncio.get_event_loop()
+    await asyncio.to_thread(app.run, host='0.0.0.0', port=port)
 
 if __name__ == '__main__':
     asyncio.run(main())
