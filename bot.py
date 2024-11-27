@@ -1,4 +1,5 @@
 import os
+import asyncio
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -85,6 +86,10 @@ def run_bot():
     )
 
     application.add_handler(conv_handler)
+
+    # Configurar un nuevo event loop para este hilo
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     # Iniciar el bot
     application.run_polling()
