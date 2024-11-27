@@ -9,6 +9,8 @@ from telegram.ext import (
     ContextTypes,
 )
 from datetime import datetime, timedelta
+from flask import Flask
+import threading
 
 # Estados del flujo de conversación
 ENTRADA, PAUSA, REGRESO = range(3)
@@ -64,7 +66,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # Configuración principal del bot
-def main():
+def run_bot():
     # Coloca aquí el token de tu bot
     TOKEN = os.getenv("TOKEN_API")
 
@@ -87,5 +89,18 @@ def main():
     # Iniciar el bot
     application.run_polling()
 
+# Configuración del servidor Flask
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "El bot está corriendo y escuchando en Render."
+
 if __name__ == '__main__':
-    main()
+    # Ejecuta el bot en un hilo separado
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.start()
+
+    # Inicia el servidor Flask
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
