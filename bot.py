@@ -10,11 +10,17 @@ from telegram.ext import (
     ContextTypes,
 )
 from datetime import datetime, timedelta
-from flask import Flask
-import threading
+from flask import Flask, Request
 
 # Estados del flujo de conversación
 ENTRADA, PAUSA, REGRESO = range(3)
+
+# Crear la aplicación Flask
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "El bot está corriendo y escuchando en Render."
 
 # Función para iniciar el bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,12 +72,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Operación cancelada. ¡Hasta la próxima!")
     return ConversationHandler.END
 
-# Configuración principal del bot
-def run_bot():
+# Función principal para ejecutar el bot y el servidor Flask juntos
+async def main():
     # Coloca aquí el token de tu bot
     TOKEN = os.getenv("TOKEN_API")
 
-    # Crear la aplicación
+    # Crear la aplicación de Telegram
     application = Application.builder().token(TOKEN).build()
 
     # Conversación
@@ -87,25 +93,15 @@ def run_bot():
 
     application.add_handler(conv_handler)
 
-    # Configurar un nuevo event loop para este hilo
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # Crea una tarea asincrónica para ejecutar el bot
+    bot_task = asyncio.create_task(application.run_polling())
 
-    # Iniciar el bot
-    application.run_polling()
+    # Crea una tarea asincrónica para ejecutar Flask
+    port = int(os.environ.get("PORT", 5000))
+    flask_task = asyncio.create_task(asyncio.to_thread(app.run, host='0.0.0.0', port=port))
 
-# Configuración del servidor Flask
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "El bot está corriendo y escuchando en Render."
+    # Ejecuta ambas tareas
+    await asyncio.gather(bot_task, flask_task)
 
 if __name__ == '__main__':
-    # Ejecuta el bot en un hilo separado
-    bot_thread = threading.Thread(target=run_bot)
-    bot_thread.start()
-
-    # Inicia el servidor Flask
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    asyncio.run(main())
