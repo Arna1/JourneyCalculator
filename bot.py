@@ -93,14 +93,22 @@ async def main():
 
     application.add_handler(conv_handler)
 
-    # Inicia el bot como una tarea asincrónica
-    await application.start()  # Arranca el bot
+    # Inicializar y arrancar el bot
+    await application.initialize()  # Inicializa la aplicación
+    await application.start()       # Arranca el bot
     print("Bot iniciado")
 
-    # Mantén el servidor Flask ejecutándose
-    port = int(os.environ.get("PORT", 5000))
-    loop = asyncio.get_event_loop()
-    await asyncio.to_thread(app.run, host='0.0.0.0', port=port)
+    # Mantén la aplicación corriendo
+    async def stop():
+        await application.stop()    # Detiene el bot al finalizar
+        await application.shutdown()
+
+    try:
+        # Ejecuta Flask como una tarea asincrónica
+        port = int(os.environ.get("PORT", 5000))
+        await asyncio.to_thread(app.run, host='0.0.0.0', port=port)
+    finally:
+        await stop()
 
 if __name__ == '__main__':
     asyncio.run(main())
